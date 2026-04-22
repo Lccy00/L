@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    <title>时光回忆 - 99张照片相册</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Microsoft Yahei', 'PingFang SC', sans-serif;
+            background-color: #f8f5f2;
+            color: #333;
+            min-height: 100vh;
+            padding: 10px 0;
+            overflow-x: hidden;
+        }
+
+        .page-title {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 0 15px;
+        }
+
+            .page-title h1 {
+                font-size: 1.8rem;
+                color: #5c4033;
+                margin-bottom: 8px;
+                position: relative;
+                display: inline-block;
+            }
+
+                .page-title h1::after {
+                    content: '';
+                    position: absolute;
+                    bottom: -6px;
+                    left: 10%;
+                    width: 80%;
+                    height: 2px;
+                    background: linear-gradient(to right, #d2b48c, #8b4513);
+                }
+
+            .page-title p {
+                color: #777;
+                font-size: 0.9rem;
+                line-height: 1.4;
+            }
+
+        /* 音乐控制按钮 */
+        .music-control {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #8b4513;
+            cursor: pointer;
+            z-index: 999;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border: none;
+            outline: none;
+        }
+
+        .album-container {
+            width: 94%;
+            max-width: 1000px;
+            margin: 0 auto;
+            position: relative;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .photo-wrapper {
+            width: 100%;
+            position: relative;
+        }
+
+        .photo-item {
+            position: relative;
+            width: 100%;
+            display: none;
+        }
+
+            .photo-item img {
+                display: block;
+                width: 100%;
+                height: auto;
+                max-height: 90vh;
+                object-fit: contain;
+            }
+
+            .photo-item.active {
+                display: block;
+            }
+
+        .photo-caption {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(to top, rgba(0,0,0,0.75), transparent);
+            color: white;
+            transform: translateY(100%);
+            transition: transform 0.4s ease;
+        }
+
+        .photo-wrapper:hover .photo-caption,
+        .photo-wrapper.touch .photo-caption {
+            transform: translateY(0);
+        }
+
+        .photo-caption h3 {
+            font-size: 1.2rem;
+            margin-bottom: 6px;
+        }
+
+        .photo-caption p {
+            font-size: 0.8rem;
+            opacity: 0.9;
+            line-height: 1.3;
+        }
+
+        .nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.9);
+            border: none;
+            font-size: 1.8rem;
+            color: #5c4033;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .prev-btn {
+            left: 8px;
+        }
+
+        .next-btn {
+            right: 8px;
+        }
+
+        .nav-btn:hover, .nav-btn:active {
+            background: #d2b48c;
+            color: white;
+        }
+
+        .indicator {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+            padding: 0 10px;
+        }
+
+        .indicator-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #ddd;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            touch-action: manipulation;
+        }
+
+            .indicator-dot.active {
+                background: #8b4513;
+                transform: scale(1.1);
+            }
+
+        @media (min-width: 768px) {
+            .page-title {
+                margin-bottom: 40px;
+            }
+
+                .page-title h1 {
+                    font-size: 2.2rem;
+                }
+
+                .page-title p {
+                    font-size: 1rem;
+                }
+
+            .album-container {
+                width: 90%;
+            }
+
+            .nav-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 1.5rem;
+            }
+
+            .prev-btn {
+                left: 20px;
+            }
+
+            .next-btn {
+                right: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 音乐播放按钮 -->
+    <button class="music-control" id="musicBtn">🎵</button>
+    <!-- 背景音乐（已修复闭合标签） -->
+    <audio id="bgMusic" loop preload="auto">
+        <source src="bgmusic.mp3" type="audio/mpeg">
+    </audio>
+
+    <div class="page-title">
+        <h1>时光里的回忆</h1>
+        <p>每一张照片，都是一段温柔的时光</p>
+    </div>
+
+    <div class="album-container">
+        <div class="photo-wrapper" id="photoWrapper">
+
+            <!-- ====================== 99张照片 完整代码 ====================== -->
+            <div class="photo-item active">
+                <img src="1.jpg" alt="">
+                <div class="photo-caption">
+                    <p>遇见你之后，我再也没羡慕过任何人</p>
+                </div>
+            </div>
+            <div class="photo-item"><img src="2.jpg" alt=""><div class="photo-caption"><p>世界纷纷扰扰，还好我有你 </p></div></div>
+            <div class="photo-item"><img src="3.jpg" alt=""><div class="photo-caption"><p>你是我藏在微风里的喜欢</p></div></div>
+            <div class="photo-item"><img src="4.jpg" alt=""><div class="photo-caption"><p>想把所有温柔，都存起来只给你</p></div></div>
+            <div class="photo-item"><img src="5.jpg" alt=""><div class="photo-caption"><p>有你在，连空气都是甜的 </p></div></div>
+            <div class="photo-item"><img src="6.jpg" alt=""><div class="photo-caption"><p>我的满心欢喜，全都给你</p></div></div>
+            <div class="photo-item"><img src="7.jpg" alt=""><div class="photo-caption"><p>不用见日月，你就是星辰</p></div></div>
+            <div class="photo-item"><img src="8.jpg" alt=""><div class="photo-caption"><p>余生漫漫，只想和你慢慢过</p></div></div>
+            <div class="photo-item"><img src="9.jpg" alt=""><div class="photo-caption"><p>你一笑，我就觉得人间值得</p></div></div>
+            <div class="photo-item"><img src="10.jpg" alt=""><div class="photo-caption"><p>喜欢是常态，对你是偏爱</p></div></div>
+
+            <div class="photo-item"><img src="11.jpg" alt=""><div class="photo-caption"><p>想和你，从心动到古稀</p></div></div>
+            <div class="photo-item"><img src="12.jpg" alt=""><div class="photo-caption"><p>你是我疲惫生活里的温柔梦想</p></div></div>
+            <div class="photo-item"><img src="13.jpg" alt=""><div class="photo-caption"><p>万物皆有裂痕，那是光照进来，也是你走进来</p></div></div>
+            <div class="photo-item"><img src="14.jpg" alt=""><div class="photo-caption"><p>别人再好与我无关，你再普通我都喜欢</p></div></div>
+            <div class="photo-item"><img src="15.jpg" alt=""><div class="photo-caption"><p>一想到能和你共度余生，我就对余生充满期待</p></div></div>
+            <div class="photo-item"><img src="16.jpg" alt=""><div class="photo-caption"><p>我攒了好多年的温柔，全都可以给你</p></div></div>
+            <div class="photo-item"><img src="17.jpg" alt=""><div class="photo-caption"><p>你是我日复一日的梦想</p></div></div>
+            <div class="photo-item"><img src="18.jpg" alt=""><div class="photo-caption"><p>世间万般美好，都不及你一分</p></div></div>
+            <div class="photo-item"><img src="19.jpg" alt=""><div class="photo-caption"><p>遇见你，是我这辈子最幸运的事</p></div></div>
+            <div class="photo-item"><img src="20.jpg" alt=""><div class="photo-caption"><p>我不想做你生命的插曲，只想做你结局</p></div></div>
+
+            <div class="photo-item"><img src="21.jpg" alt=""><div class="photo-caption"><p>风很温柔，花很浪漫，你很特别</p></div></div>
+            <div class="photo-item"><img src="22.jpg" alt=""><div class="photo-caption"><p>我贪恋的人间烟火，不偏不倚全是你</p></div></div>
+            <div class="photo-item"><img src="23.jpg" alt=""><div class="photo-caption"><p>想牵着你的手，从心动到白首</p></div></div>
+            <div class="photo-item"><img src="24.jpg" alt=""><div class="photo-caption"><p>你是我明目张胆的偏爱，众所周知的私心</p></div></div>
+            <div class="photo-item"><img src="25.jpg" alt=""><div class="photo-caption"><p>山河远阔，人间烟火，无一是你，无一不是你</p></div></div>
+            <div class="photo-item"><img src="26.jpg" alt=""><div class="photo-caption"><p>只要最后是你，晚一点也没关系</p></div></div>
+            <div class="photo-item"><img src="27.jpg" alt=""><div class="photo-caption"><p>你是我疲惫时，第一个想依靠的人</p></div></div>
+            <div class="photo-item"><img src="28.jpg" alt=""><div class="photo-caption"><p>世界再大，我的眼里只有你</p></div></div>
+            <div class="photo-item"><img src="29.jpg" alt=""><div class="photo-caption"><p>想把所有浪漫，都和你体验一遍</p></div></div>
+            <div class="photo-item"><img src="30.jpg" alt=""><div class="photo-caption"><p>你是我藏在心底的爱意泛滥</p></div></div>
+
+            <div class="photo-item"><img src="31.jpg" alt=""><div class="photo-caption"><p>遇见你，我才明白什么叫一眼万年</p></div></div>
+            <div class="photo-item"><img src="32.jpg" alt=""><div class="photo-caption"><p>想把每一句我想你，都换成我去找你</p></div></div>
+            <div class="photo-item"><img src="33.jpg" alt=""><div class="photo-caption"><p>你是我所有温柔的来源和归属</p></div></div>
+            <div class="photo-item"><img src="34.jpg" alt=""><div class="photo-caption"><p>人间无趣，但有你</p></div></div>
+            <div class="photo-item"><img src="35.jpg" alt=""><div class="photo-caption"><p>我不想流浪了，你就是我的归宿</p></div></div>
+            <div class="photo-item"><img src="36.jpg" alt=""><div class="photo-caption"><p>你不用多好，我喜欢就好</p></div></div>
+            <div class="photo-item"><img src="37.jpg" alt=""><div class="photo-caption"><p>我没有很好，你不嫌弃就好</p></div></div>
+            <div class="photo-item"><img src="38.jpg" alt=""><div class="photo-caption"><p>一见到你，我就忍不住嘴角上扬</p></div></div>
+            <div class="photo-item"><img src="39.jpg" alt=""><div class="photo-caption"><p>你是我平淡岁月里，最耀眼的星光</p></div></div>
+            <div class="photo-item"><img src="40.jpg" alt=""><div class="photo-caption"><p>此生固短，无你何欢</p></div></div>
+
+            <!-- 41-50 -->
+            <div class="photo-item"><img src="41.jpg" alt=""><div class="photo-caption"><p>想和你一房两人，三餐四季</p></div></div>
+            <div class="photo-item"><img src="42.jpg" alt=""><div class="photo-caption"><p>你是我奔赴未来的所有意义</p></div></div>
+            <div class="photo-item"><img src="43.jpg" alt=""><div class="photo-caption"><p>爱意随风起，风止意难平，而你一直在</p></div></div>
+            <div class="photo-item"><img src="44.jpg" alt=""><div class="photo-caption"><p>我想陪你看遍世间所有风景</p></div></div>
+            <div class="photo-item"><img src="45.jpg" alt=""><div class="photo-caption"><p>你是我年少的欢喜，也是余生的甜蜜</p></div></div>
+            <div class="photo-item"><img src="46.jpg" alt=""><div class="photo-caption"><p>别人都在抬头看星星，我只低着头看你</p></div></div>
+            <div class="photo-item"><img src="47.jpg" alt=""><div class="photo-caption"><p>遇见你，爱意汹涌，看万物都浪漫心动</p></div></div>
+            <div class="photo-item"><img src="48.jpg" alt=""><div class="photo-caption"><p>想做你永远的小朋友，也想做你依靠的大人</p></div></div>
+            <div class="photo-item"><img src="49.jpg" alt=""><div class="photo-caption"><p>你是我唯一想要了解到底的人</p></div></div>
+            <div class="photo-item"><img src="50.jpg" alt=""><div class="photo-caption"><p>有你在，未来便有了所有盼头</p></div></div>
+
+            <!-- 51-60 -->
+            <div class="photo-item"><img src="51.jpg" alt=""><div class="photo-caption"><p>世界很大，幸福很小，有你刚好</p></div></div>
+            <div class="photo-item"><img src="52.jpg" alt=""><div class="photo-caption"><p>你是我所有情绪的来由</p></div></div>
+            <div class="photo-item"><img src="53.jpg" alt=""><div class="photo-caption"><p>我想把温柔和浪漫，都设为仅你可见</p></div></div>
+            <div class="photo-item"><img src="54.jpg" alt=""><div class="photo-caption"><p>你是我跑了八条街，也要去见的人</p></div></div>
+            <div class="photo-item"><img src="55.jpg" alt=""><div class="photo-caption"><p>与你相遇，胜却人间无数</p></div></div>
+            <div class="photo-item"><img src="56.jpg" alt=""><div class="photo-caption"><p>愿往后余生，冷暖有相知，喜乐有分享</p></div></div>
+            <div class="photo-item"><img src="57.jpg" alt=""><div class="photo-caption"><p>你是我藏不住的欢喜，说不尽的温柔</p></div></div>
+            <div class="photo-item"><img src="58.jpg" alt=""><div class="photo-caption"><p>我对你，永远是满心满眼</p></div></div>
+            <div class="photo-item"><img src="59.jpg" alt=""><div class="photo-caption"><p>只要你在身边，再难熬的日子都很甜</p></div></div>
+            <div class="photo-item"><img src="60.jpg" alt=""><div class="photo-caption"><p>你是我一生只会遇见一次的惊喜</p></div></div>
+
+            <!-- 61-70 -->
+            <div class="photo-item"><img src="61.jpg" alt=""><div class="photo-caption"><p>我想和你，不止在今天，而是在朝朝暮暮</p></div></div>
+            <div class="photo-item"><img src="62.jpg" alt=""><div class="photo-caption"><p>你是我漫漫余生里，斩钉截铁的梦想</p></div></div>
+            <div class="photo-item"><img src="63.jpg" alt=""><div class="photo-caption"><p>春风十里，不如睡你身边</p></div></div>
+            <div class="photo-item"><img src="64.jpg" alt=""><div class="photo-caption"><p>你是我疲惫生活中的英雄梦想</p></div></div>
+            <div class="photo-item"><img src="65.jpg" alt=""><div class="photo-caption"><p>我想把所有温柔，都只对你可见</p></div></div>
+            <div class="photo-item"><img src="66.jpg" alt=""><div class="photo-caption"><p>遇见你之后，我再也没想过别人</p></div></div>
+            <div class="photo-item"><img src="67.jpg" alt=""><div class="photo-caption"><p>你是我眼里，最独一无二的存在</p></div></div>
+            <div class="photo-item"><img src="68.jpg" alt=""><div class="photo-caption"><p>想和你从青丝到白发，一路并肩走</p></div></div>
+            <div class="photo-item"><img src="69.jpg" alt=""><div class="photo-caption"><p>你是我所有温柔的起点</p></div></div>
+            <div class="photo-item"><img src="70.jpg" alt=""><div class="photo-caption"><p>人间烟火，山河辽阔，都不及你</p></div></div>
+
+            <!-- 71-80 -->
+            <div class="photo-item"><img src="71.jpg" alt=""><div class="photo-caption"><p>我喜欢你，不是一时兴起，是深思熟虑</p></div></div>
+            <div class="photo-item"><img src="72.jpg" alt=""><div class="photo-caption"><p>你是我疲惫时，最想拥抱的人</p></div></div>
+            <div class="photo-item"><img src="73.jpg" alt=""><div class="photo-caption"><p>想和你把日子，过得细水长流</p></div></div>
+            <div class="photo-item"><img src="74.jpg" alt=""><div class="photo-caption"><p>你是我藏在星星里的浪漫</p></div></div>
+            <div class="photo-item"><img src="75.jpg" alt=""><div class="photo-caption"><p>此生何其有幸，才能遇见你</p></div></div>
+            <div class="photo-item"><img src="76.jpg" alt=""><div class="photo-caption"><p>你是我一眼心动，也是万年情深</p></div></div>
+            <div class="photo-item"><img src="77.jpg" alt=""><div class="photo-caption"><p>想和你一起，吃很多顿饭，说很多句晚安</p></div></div>
+            <div class="photo-item"><img src="78.jpg" alt=""><div class="photo-caption"><p>你是我坚定不移的选择</p></div></div>
+            <div class="photo-item"><img src="79.jpg" alt=""><div class="photo-caption"><p>有你之后，万物皆可期待</p></div></div>
+            <div class="photo-item"><img src="80.jpg" alt=""><div class="photo-caption"><p>我想把全世界最好的，都捧到你面前</p></div></div>
+
+            <!-- 81-90 -->
+            <div class="photo-item"><img src="81.jpg" alt=""><div class="photo-caption"><p>你是我日复一日的心动</p></div></div>
+            <div class="photo-item"><img src="82.jpg" alt=""><div class="photo-caption"><p>想和你共黄昏，问你粥可温</p></div></div>
+            <div class="photo-item"><img src="83.jpg" alt=""><div class="photo-caption"><p>你是我所有温柔与例外</p></div></div>
+            <div class="photo-item"><img src="84.jpg" alt=""><div class="photo-caption"><p>遇见你，是故事的开始；走到底，是余生的欢喜</p></div></div>
+            <div class="photo-item"><img src="85.jpg" alt=""><div class="photo-caption"><p>我想把所有偏爱，都只给你一个人</p></div></div>
+            <div class="photo-item"><img src="86.jpg" alt=""><div class="photo-caption"><p>你是我跨越山海也要拥抱的人</p></div></div>
+            <div class="photo-item"><img src="87.jpg" alt=""><div class="photo-caption"><p>有你，人间值得，未来可期</p></div></div>
+            <div class="photo-item"><img src="88.jpg" alt=""><div class="photo-caption"><p>你是我藏在心底，永不落幕的喜欢</p></div></div>
+            <div class="photo-item"><img src="89.jpg" alt=""><div class="photo-caption"><p>想和你，从校服到婚纱，从青涩到白发</p></div></div>
+            <div class="photo-item"><img src="90.jpg" alt=""><div class="photo-caption"><p>你是我一生只会心动一次的人</p></div></div>
+
+            <!-- 91-99 -->
+            <div class="photo-item"><img src="91.jpg" alt=""><div class="photo-caption"><p>温柔可以装，深情可以演，唯独对你是真的</p></div></div>
+            <div class="photo-item"><img src="92.jpg" alt=""><div class="photo-caption"><p>我不想错过你，也不想把你让给别人</p></div></div>
+            <div class="photo-item"><img src="93.jpg" alt=""><div class="photo-caption"><p>你是我平淡生活里的来日方长</p></div></div>
+            <div class="photo-item"><img src="94.jpg" alt=""><div class="photo-caption"><p>想和你把每一个平凡日子，都过成诗</p></div></div>
+            <div class="photo-item"><img src="95.jpg" alt=""><div class="photo-caption"><p>你是我所有心事的尽头</p></div></div>
+            <div class="photo-item"><img src="96.jpg" alt=""><div class="photo-caption"><p>我喜欢你，胜于昨日，略匮明朝</p></div></div>
+            <div class="photo-item"><img src="97.jpg" alt=""><div class="photo-caption"><p>有你在，四季皆可，万物可爱</p></div></div>
+            <div class="photo-item"><img src="98.jpg" alt=""><div class="photo-caption"><p>往后余生，风雪是你，平淡是你，心底温柔也是你</p></div></div>
+            <div class="photo-item"><img src="99.jpg" alt=""><div class="photo-caption"><p>我爱你，不止今天，而是朝朝暮暮，岁岁年年</p></div></div>
+
+        </div>
+
+        <button class="nav-btn prev-btn" id="prevBtn">←</button>
+        <button class="nav-btn next-btn" id="nextBtn">→</button>
+    </div>
+
+    <!-- 指示器：JS自动生成，无需手动写！ -->
+    <div class="indicator" id="indicator"></div>
+
+    <script>
+        const photoItems = document.querySelectorAll('.photo-item');
+        const indicator = document.getElementById('indicator');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const photoWrapper = document.getElementById('photoWrapper');
+        const bgMusic = document.getElementById('bgMusic');
+        const musicBtn = document.getElementById('musicBtn');
+        let currentIndex = 0;
+        let autoPlayTimer;
+        let isMusicPlay = false;
+
+        // =============== 音乐控制 ===============
+        function toggleMusic() {
+            if (bgMusic.paused) {
+                bgMusic.play().then(() => {
+                    isMusicPlay = true;
+                    musicBtn.textContent = "🔇";
+                }).catch(err => {
+                    console.log("浏览器限制自动播放，需手动点击播放");
+                });
+            } else {
+                bgMusic.pause();
+                isMusicPlay = false;
+                musicBtn.textContent = "🎵";
+            }
+        }
+
+        musicBtn.addEventListener('click', toggleMusic);
+
+        // 页面交互后尝试播放（解决浏览器自动播放限制）
+        document.addEventListener('touchstart', function () {
+            if (!isMusicPlay && bgMusic.paused) {
+                bgMusic.play().then(() => {
+                    isMusicPlay = true;
+                    musicBtn.textContent = "🔇";
+                });
+            }
+        }, { once: true });
+
+        // =============== 自动生成99个指示器 ===============
+        photoItems.forEach((item, index) => {
+            const dot = document.createElement('div');
+            dot.className = 'indicator-dot';
+            dot.dataset.index = index;
+            if (index === 0) dot.classList.add('active');
+            indicator.appendChild(dot);
+        });
+        const indicatorDots = document.querySelectorAll('.indicator-dot');
+
+        // =============== 轮播逻辑 ===============
+        function switchPhoto(index) {
+            photoItems.forEach(item => item.classList.remove('active'));
+            indicatorDots.forEach(dot => dot.classList.remove('active'));
+            photoItems[index].classList.add('active');
+            indicatorDots[index].classList.add('active');
+            currentIndex = index;
+        }
+
+        function nextPhoto() {
+            switchPhoto((currentIndex + 1) % photoItems.length);
+        }
+
+        function prevPhoto() {
+            switchPhoto((currentIndex - 1 + photoItems.length) % photoItems.length);
+        }
+
+        function startAutoPlay() {
+            stopAutoPlay();
+            autoPlayTimer = setInterval(nextPhoto, 5000);
+        }
+
+        function stopAutoPlay() {
+            clearInterval(autoPlayTimer);
+        }
+
+        // =============== 事件绑定 ===============
+        nextBtn.addEventListener('click', () => { nextPhoto(); startAutoPlay(); });
+        prevBtn.addEventListener('click', () => { prevPhoto(); startAutoPlay(); });
+
+        indicatorDots.forEach(dot => {
+            dot.addEventListener('click', () => {
+                switchPhoto(+dot.dataset.index);
+                startAutoPlay();
+            });
+        });
+
+        photoWrapper.addEventListener('mouseenter', stopAutoPlay);
+        photoWrapper.addEventListener('mouseleave', startAutoPlay);
+
+        photoWrapper.addEventListener('touchstart', () => {
+            photoWrapper.classList.add('touch');
+            stopAutoPlay();
+        });
+
+        photoWrapper.addEventListener('touchend', () => {
+            photoWrapper.classList.remove('touch');
+            startAutoPlay();
+        });
+
+        // 手机滑动切换
+        let touchStartX = 0;
+        photoWrapper.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+
+        photoWrapper.addEventListener('touchend', e => {
+            const diff = touchStartX - e.changedTouches[0].screenX;
+            if (diff > 50) nextPhoto();
+            if (diff < -50) prevPhoto();
+            startAutoPlay();
+        });
+
+        // 启动
+        startAutoPlay();
+    </script>
+</body>
+</html>
